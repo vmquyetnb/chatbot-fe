@@ -10,7 +10,7 @@
                 <span>BotGPT</span>
             </button>
             <div class="time w-100">
-                <span class="">Hôm nay</span>
+                <span class="ms-1">Hôm nay</span>
                 <button class="btn-chat text-start mt-2 p-1 w-100">
                     User hỏi 
                 </button>
@@ -25,7 +25,7 @@
 
 <style scoped>
 .sidebar{
-    min-height: 1080px;
+    min-height: 934px;
     background: #000;
     color: #fff;
     font-size: 14px;
