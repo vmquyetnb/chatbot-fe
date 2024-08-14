@@ -85,3 +85,25 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Toàn bộ thanh cuộn */
+::-webkit-scrollbar {
+  width: 8px; /* Độ rộng của thanh cuộn dọc */
+  height: 10%!important; /* Độ cao của thanh cuộn ngang */
+}
+
+/* Phần thumb (nút kéo của thanh cuộn) */
+::-webkit-scrollbar-thumb {
+  background: #888; /* Màu của nút kéo */
+}
+
+/* Phần track (đường dẫn của thanh cuộn) */
+::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Màu của đường dẫn */
+  height: 20%;
+}
+
+/* Khi hover vào nút kéo */
+::-webkit-scrollbar-thumb:hover {
+  background: #555; /* Màu khi hover vào nút kéo */
+}

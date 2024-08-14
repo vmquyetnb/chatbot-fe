@@ -5,34 +5,45 @@
                 <span class="header-text">BotGPT</span>
                 <img src="../assets/gpt.svg" alt="gpt.svg">
             </div>
-            <div class="d-flex justify-content-center w-100">
+            <div class="d-flex  w-100" >
                 <div class="input w-100 d-flex flex-column gap-2" >
-                    <div v-for="(msg,index) in messages" :key="index">
-                        <div class="message d-flex flex-row-reverse" v-if="msg.sender === 'USER'">
-                            <div class="user-message">
-                                <p class="mb-0 text-break">{{ msg.content }}</p>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="d-flex gap-2" v-if="msg.sender === 'BOT'">
-                                <img  style="width: 24px;height: max-content;" src="../assets/gpt.svg" alt="">
-                                <div class="bot-message">
-                                    <p class="mb-0 text-break">{{ msg.content }}</p>
+                    <div class="message-group d-flex flex-column align-items-center" v-if="messages.length > 0">
+                        <div class="w-100 message">
+                            <div v-for="(msg,index) in messages" :key="index">
+                                <div class="d-flex flex-row-reverse" v-if="msg.sender === 'USER'">
+                                    <div class="user-message mb-2">
+                                        <p class="mb-0 text-break">{{ msg.content }}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="d-flex gap-2" v-if="loading && index === messages.length - 1">
-                                <img  style="width: 24px;height: max-content;" src="../assets/gpt.svg" alt="">
-                                <div class="bot-message">
-                                    <div class="w-100">
-                                        <div class="loader"></div>
+                                <div>
+                                    <div class="d-flex gap-2" v-if="msg.sender === 'BOT'">
+                                        <img  style="width: 24px;height: max-content;" src="../assets/gpt.svg" alt="">
+                                        <div class="bot-message mb-2">
+                                            <p class="mb-0 text-break">{{ msg.content }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2" v-if="loading && index === messages.length - 1">
+                                        <img  style="width: 24px;height: max-content;" src="../assets/gpt.svg" alt="">
+                                        <div class="bot-message">
+                                            <div class="w-100">
+                                                <div class="loader"></div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="input-group w-100 flex-nowrap">
-                        <input type="text" class="form-control" @keydown.enter="sendMessage()" v-model="message.content" placeholder="Tin nhắn BotGPT" aria-label="Username" aria-describedby="addon-wrapping">
-                        <span @click="sendMessage()" class="input-group-text" id="addon-wrapping"><i class="bi bi-send"></i></span>
+                    <div class="d-flex flex-column align-items-center gap-2 mb-5" v-else>
+                        <img class="img-gpt" src="../assets/gpt.svg" alt="gpt.svg">
+                        <p>Chào mừng bạn đã đến với BotGPT</p>
+                        <p>Hỏi tôi những gì bạn muốn nhé !</p>
+                    </div>
+                    <div class="w-100 d-flex justify-content-center">
+                        <div class="input-group w-100 flex-nowrap">
+                            <input type="text" class="form-control" @keydown.enter="sendMessage()" v-model="message.content" placeholder="Tin nhắn BotGPT" aria-label="Username" aria-describedby="addon-wrapping">
+                            <span @click="sendMessage()" class="input-group-text" id="addon-wrapping"><i class="bi bi-send"></i></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -41,21 +52,42 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted,onUpdated ,onUnmounted, watch } from 'vue';
 import axios from 'axios';
 import Stomp from 'stompjs';
 import SockJS from 'sockjs-client';
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
 
 const loading = ref(true);
 const messages = ref([]);
-const conversationId = ref(1)
 
 const message = ref({
     content: "",
 });
 
-const stompClient = Stomp.over(new SockJS('http://localhost:8080/ws'));
-stompClient.debug = null;
+
+const id = ref(route.params.id);
+
+const getMessageByConversationId = async (conversationId) => {
+    try {
+        const res = await axios.get('http://localhost:8080/message/all', {
+            params: { conversationId }
+        });
+        messages.value = res.data.output;
+        loading.value = false;
+    } catch (error) {
+        console.error('Error fetching messages:', error);
+        loading.value = false;
+    }
+};
+
+watch(() => route.params.id, (newId) => {
+    id.value = newId;
+    getMessageByConversationId(newId);
+}, { immediate: true });
+
 
 const sendMessage = async () => {
   if (message.value.content.trim() === '') return;
@@ -70,7 +102,7 @@ const sendMessage = async () => {
             'Content-Type': 'application/json',
             },
             params: { 
-                conversationId: conversationId.value 
+                conversationId: id.value 
             },
             withCredentials: true,
         });
@@ -82,6 +114,9 @@ const sendMessage = async () => {
     }
 };
 
+const stompClient = Stomp.over(new SockJS('http://localhost:8080/ws'));
+stompClient.debug = null;
+
 const onMessageReceived = (message) => {
     const newMessage = JSON.parse(message.body);
     messages.value.push(newMessage);
@@ -91,19 +126,31 @@ const onMessageReceived = (message) => {
 };
 
 onMounted(() => {
+    getMessageByConversationId(id.value);
     stompClient.connect({}, (frame) => {
         stompClient.subscribe('/topic/messages', onMessageReceived);
+        scrollToBottom();
     }, (error) => {
         console.error('Error connecting to WebSocket:', error);
     });
 });
+
+onUpdated(() => {
+  scrollToBottom();
+});
+
+const scrollToBottom = () => {
+  const messageGroup = document.querySelector('.message-group');
+  if (messageGroup) {
+    messageGroup.scrollTop = messageGroup.scrollHeight;
+  }
+};
 
 onUnmounted(() => {
     if (stompClient) {
         stompClient.disconnect();
     }
 });
-
 </script>
 
 <style scoped>
@@ -119,8 +166,17 @@ onUnmounted(() => {
 .header img{
     width: 32px;
 }
-.input{
+.message,.input-group{
     max-width: 768px;
+}
+.message-group{
+    display: flex;
+    height: 850px;
+    overflow-y: scroll;
+}
+.message-group::-webkit-scrollbar {
+  width: 8px;
+  height: 5px!important;
 }
 .input-group input,.input-group span{
     font-size: 12px;
@@ -163,5 +219,9 @@ input::placeholder {
     33% {box-shadow: 8px 0 #fff, -8px 0 #fff2;background: #fff2}
     66% {box-shadow: 8px 0 #fff2,-8px 0 #fff; background: #fff2}
     100%{box-shadow: 8px 0 #fff2,-8px 0 #fff; background: #fff }
+}
+
+.img-gpt{
+    height: 50px;
 }
 </style>

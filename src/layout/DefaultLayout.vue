@@ -5,7 +5,7 @@
                 <SideBar />
             </div>
             <div class="col-10 p-0 m-0">
-                <ChatWindow />
+                <RouterView></RouterView>
             </div>
         </div>
     </div>
@@ -13,7 +13,6 @@
 
 <script setup>
 import SideBar from '../components/SideBar.vue';
-import ChatWindow from '../views/ChatWindow.vue';
 </script>
 
 <style scoped>
